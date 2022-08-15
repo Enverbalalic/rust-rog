@@ -1,3 +1,5 @@
+use std::fmt::{Display, Formatter};
+
 use hidapi::HidDevice;
 
 use super::{AsusRogVendorRequest};
@@ -8,6 +10,14 @@ pub struct DpiDataResponse {
     pub dpi2: usize,
     pub dpi3: usize,
     pub dpi4: usize,
+}
+
+impl Display for DpiDataResponse {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let Self { dpi1, dpi2, dpi3, dpi4 } = self;
+
+        write!(f, "DPI 1: {dpi1}\nDPI 2: {dpi2}\nDPI 3: {dpi3}\nDPI 4: {dpi4}")
+    }
 }
 
 pub struct GetDpiData;

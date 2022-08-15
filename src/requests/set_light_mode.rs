@@ -1,11 +1,12 @@
 use std::ops::Deref;
 
+use clap::{clap_derive::ArgEnum};
 use hidapi::HidDevice;
 
 use super::AsusRogVendorRequest;
 
 #[repr(u8)]
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, ArgEnum)]
 pub enum LedType {
     Logo = 0,
     Wheel = 1,
@@ -26,7 +27,7 @@ impl From<usize> for LedType {
 }
 
 #[repr(u8)]
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, ArgEnum)]
 pub enum LightMode {
     Default = 0,
     Breathing = 1,
@@ -60,6 +61,28 @@ pub enum LedBrightness {
     Percent50 = 2,
     Percent75 = 3,
     Percent100 = 4,
+}
+
+impl LedBrightness {
+    pub fn from_percent(percent: usize) -> Self {
+        match percent {
+            0 => Self::Percent0,
+            25 => Self::Percent25,
+            50 => Self::Percent50,
+            75 => Self::Percent75,
+            100 => Self::Percent100,
+            _ => panic!("Disallowed brightness value. Allowed values are [0, 25, 50, 75, 100]"),
+        }
+    }
+    pub fn as_percent(&self) -> usize {
+        match self {
+            LedBrightness::Percent0 => 0,
+            LedBrightness::Percent25 => 25,
+            LedBrightness::Percent50 => 50,
+            LedBrightness::Percent75 => 75,
+            LedBrightness::Percent100 => 100,
+        }
+    }
 }
 
 impl From<u8> for LedBrightness {
@@ -101,7 +124,7 @@ impl Deref for SetLightModeRequest {
     }
 }
 
-impl AsusRogVendorRequest<()> for SetLightModeRequest {
+impl AsusRogVendorRequest<bool> for SetLightModeRequest {
     fn as_byte_vec(&self) -> [u8; 64] {
         let mut buf = [0; 64];
 
@@ -117,10 +140,20 @@ impl AsusRogVendorRequest<()> for SetLightModeRequest {
         buf
     }
 
-    fn execute(&self, device: &HidDevice) -> Option<()> {
+    fn execute(&self, device: &HidDevice) -> Option<bool> {
         let req_buf = self.as_byte_vec();
 
-        device.write(&req_buf).ok().map(|_| ())
+        device.write(&req_buf).ok().map(|_| ())?;
+
+        let mut res = [0;64];
+
+        device.read(&mut res).ok()?;
+
+        if !res.starts_with(&req_buf[0..2]) {
+            return Some(false);
+        }
+
+        Some(true)
     }
 }
 

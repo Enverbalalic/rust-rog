@@ -1,10 +1,45 @@
+use std::{fmt::Display, ops::Deref};
+
 use hidapi::HidDevice;
 
-use super::{set_light_mode::{LedData}, AsusRogVendorRequest};
+use super::{
+    set_light_mode::LedData,
+    AsusRogVendorRequest,
+};
+
+pub struct GetLedsResponse(Vec<LedData>);
+
+impl Deref for GetLedsResponse {
+    type Target = Vec<LedData>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl Display for GetLedsResponse {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut out_string = String::new();
+
+        for LedData {
+            led_type,
+            light_mode,
+            brightness,
+            r,
+            g,
+            b,
+        } in &self.0
+        {
+            out_string += &format!("LED Type: {led_type:?}\nLight Mode: {light_mode:?}\nBrightness: {}\nColor: #{r:02x}{g:02x}{b:02x}\n\n", brightness.as_percent());
+        }
+
+        write!(f, "{}", out_string.trim())
+    }
+}
 
 pub struct GetLeds;
 
-impl AsusRogVendorRequest<Vec<LedData>> for GetLeds {
+impl AsusRogVendorRequest<GetLedsResponse> for GetLeds {
     fn as_byte_vec(&self) -> [u8; 64] {
         let mut buf = [0; 64];
 
@@ -14,7 +49,7 @@ impl AsusRogVendorRequest<Vec<LedData>> for GetLeds {
         buf
     }
 
-    fn execute(&self, device: &HidDevice) -> Option<Vec<LedData>> {
+    fn execute(&self, device: &HidDevice) -> Option<GetLedsResponse> {
         let req_buf = self.as_byte_vec();
 
         device.write(&req_buf).ok()?;
@@ -27,11 +62,10 @@ impl AsusRogVendorRequest<Vec<LedData>> for GetLeds {
             return None;
         }
 
-        let bufs: [&[u8]; 4] = [
-            &req_buf[4..=8],
-            &req_buf[9..=13],
-            &req_buf[14..=18],
-            &req_buf[19..=23],
+        let bufs: [&[u8]; 3] = [
+            &res[4..=8],
+            &res[9..=13],
+            &res[14..=18],
         ];
 
         let mut leds = vec![];
@@ -47,6 +81,6 @@ impl AsusRogVendorRequest<Vec<LedData>> for GetLeds {
             })
         }
 
-        Some(leds)
+        Some(GetLedsResponse(leds))
     }
 }

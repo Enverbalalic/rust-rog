@@ -2,9 +2,11 @@
 name = "rust-rog"
 version = "0.1.0"
 edition = "2021"
+authors = ["Enver Balalic <balalic.enver@gmail.com>"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+clap = { version = "3.2.16", features = ["derive"] }
+hex = "0.4.3"
 hidapi = "1.4.1"
-rusb = "0.9.1"
